@@ -1,91 +1,103 @@
-use std::{io::Write, time::Duration};
+mod sources;
+mod display;
+
+use std::{time::Duration, io::{stdout, Write}};
+
+use display::screen::ComponentSection;
+use sources::*;
 
 use crossterm::{
     Result,
-    event::{self, Event, KeyCode, KeyEvent, poll},
-    queue,
-    style::Print, cursor::{MoveTo, MoveDown, MoveToColumn}, terminal::{self, size, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType}, execute,
+    event::{self, Event, KeyCode, KeyEvent, poll}, terminal::{size, self, EnterAlternateScreen, LeaveAlternateScreen}, execute, queue,
 };
+use display::screen::Screen;
 
 fn main() -> Result<()> {
-    let mut stdout = std::io::stdout();
-    run(&mut stdout)
-}
-
-fn run<W>(w: &mut W) -> Result<()>
-where
-    W: Write,
-{
-    // let (cols, rows) = size()?;
-    execute!(w, EnterAlternateScreen)?;
-    terminal::enable_raw_mode()?;
-
-    // let mut sys_time = std::time::SystemTime::now();
+    // let mut w = std::io::stdout();
+    //
+    // // let (cols, rows) = size()?;
+    // execute!(w, EnterAlternateScreen)?;
+    // terminal::enable_raw_mode()?;
+    //
+    // let (mut cols, mut rows) = size()?;
+    // queue!(w, MoveTo(0, 0))?;
     // loop {
+    //
+    //     let (updated_cols, updated_rows) = size()?;
+    //     if updated_cols != cols || updated_rows != rows {
+    //         cols = updated_cols;
+    //         rows = updated_rows;
+    //
+    //         // let line_top: String = format!("q{:o^width$}q", "TOP", width = (cols-2) as usize);
+    //         // let line_left: String = format!("{:o^height$}q", "LEFT", height = (rows-2) as usize);
+    //
+    //         queue!(w, Clear(ClearType::All))?;
+    //
+    //         // let cols_str = cols.to_string();
+    //         // let rows_str = rows.to_string();
+    //         // queue!(w, 
+    //         //         MoveTo(cols/2 - (cols_str.len() + rows_str.len() + 1) as u16 / 2, rows/2), 
+    //         //         Print(cols_str + " " + &rows_str),
+    //         //         MoveTo(0, 0),
+    //         //         Print(line_top),
+    //         // )?;
+    //         //
+    //         // queue!(w, MoveToColumn(0))?;
+    //         // for c in line_left.chars() {
+    //         //     queue!(w, MoveDown(1), MoveToColumn(0), Print(c))?;
+    //         // }
+    //         
+    //     }
+    //
     //     if let Some(char) = read_char() {
-    //         queue!(w, Print(char))?;
     //         if char.eq(&'q') {
     //             break;
     //         }
     //
     //     }
     //
-    //     if sys_time.elapsed().unwrap() >= Duration::new(1, 0) {
-    //         queue!(w, Print("NOW"), MoveToNextLine(1))?;
-    //         sys_time = std::time::SystemTime::now();
-    //     } else {
-    //         // queue!(w, Print(std::time::SystemTime::now().duration_since(elapsed).unwrap().as_millis()), MoveToNextLine(1))?;
-    //         queue!(w, MoveToColumn(0), Print(sys_time.elapsed().unwrap().as_millis()))?;
-    //     }
-    //
     //     w.flush()?;
     // }
+    //
+    // queue!(w, LeaveAlternateScreen)?;
+    // w.flush()?;
+    // terminal::disable_raw_mode()?;
 
-    let (mut cols, mut rows) = size()?;
-    queue!(w, MoveTo(0, 0))?;
-    loop {
-
-        let (updated_cols, updated_rows) = size()?;
-        if updated_cols != cols || updated_rows != rows {
-            cols = updated_cols;
-            rows = updated_rows;
-
-            let line_top: String = format!("q{:o^width$}q", "TOP", width = (cols-2) as usize);
-            let line_left: String = format!("{:o^height$}q", "LEFT", height = (rows-2) as usize);
-
-            // queue!(w, MoveTo(0, 0), Clear(ClearType::CurrentLine))?;
-            // queue!(w, MoveTo(0, 1), Clear(ClearType::CurrentLine))?;
-            queue!(w, Clear(ClearType::All))?;
-
-            let cols_str = cols.to_string();
-            let rows_str = rows.to_string();
-            queue!(w, 
-                    MoveTo(cols/2 - (cols_str.len() + rows_str.len() + 1) as u16 / 2, rows/2), 
-                    Print(cols_str + " " + &rows_str),
-                    MoveTo(0, 0),
-                    Print(line_top),
-            )?;
-
-            queue!(w, MoveToColumn(0))?;
-            for c in line_left.chars() {
-                queue!(w, MoveDown(1), MoveToColumn(0), Print(c))?;
-            }
+    let components: Vec<ComponentSection> = vec![
+        ComponentSection {
+            width: 0.5f32,
+            height: 0f32,
+            formatter: "{}",
+            sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
+            data: Vec::new(),
+        },
+        ComponentSection {
+            width: 0.2f32,
+            height: 0f32,
+            formatter: "format in front???; {}",
+            sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
+            data: Vec::new(),
         }
+    ];
+    let (cols, rows) = size()?;
+    let mut screen: Screen = Screen::new(cols, rows, components);
 
+    execute!(stdout(), EnterAlternateScreen)?;
+    terminal::enable_raw_mode()?;
+
+    screen.update()?;
+
+    loop {
         if let Some(char) = read_char() {
             if char.eq(&'q') {
                 break;
             }
-
         }
-
-        w.flush()?;
     }
-
-    queue!(w, LeaveAlternateScreen)?;
-    w.flush()?;
+    
+    queue!(stdout(), LeaveAlternateScreen)?;
+    stdout().flush()?;
     terminal::disable_raw_mode()?;
-
     Ok(())
 }
 
