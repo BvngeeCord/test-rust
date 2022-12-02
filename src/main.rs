@@ -1,16 +1,11 @@
-mod sources;
+use std::{time::Duration, io::stdout};
+
+use crossterm::{Result, event::{poll, KeyEvent, KeyCode, Event, self}, execute, terminal::{EnterAlternateScreen, self, size, LeaveAlternateScreen}};
+use display::{screen::Screen, window::Window};
+
+mod util;
+mod info_sources;
 mod display;
-
-use std::{time::Duration, io::{stdout, Write}};
-
-use display::screen::ComponentSection;
-use sources::*;
-
-use crossterm::{
-    Result,
-    event::{self, Event, KeyCode, KeyEvent, poll}, terminal::{size, self, EnterAlternateScreen, LeaveAlternateScreen}, execute, queue,
-};
-use display::screen::Screen;
 
 fn main() -> Result<()> {
     // let mut w = std::io::stdout();
@@ -63,29 +58,55 @@ fn main() -> Result<()> {
     // w.flush()?;
     // terminal::disable_raw_mode()?;
 
-    let components: Vec<ComponentSection> = vec![
-        ComponentSection {
-            width: 0.5f32,
-            height: 0f32,
-            formatter: "{}",
-            sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
-            data: Vec::new(),
-        },
-        ComponentSection {
-            width: 0.2f32,
-            height: 0f32,
-            formatter: "format in front???; {}",
-            sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
-            data: Vec::new(),
-        }
-    ];
-    let (cols, rows) = size()?;
-    let mut screen: Screen = Screen::new(cols, rows, components);
-
-    execute!(stdout(), EnterAlternateScreen)?;
+    // let components: Vec<ComponentSection> = vec![
+    //     ComponentSection {
+    //         width: 0.5f32,
+    //         height: 0f32,
+    //         formatter: "{}",
+    //         sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
+    //         data: Vec::new(),
+    //     },
+    //     ComponentSection {
+    //         width: 0.2f32,
+    //         height: 0f32,
+    //         formatter: "format in front???; {}",
+    //         sources: vec![Box::new(ListSource::Filenames), Box::new(InfoSource::Preview)],
+    //         data: Vec::new(),
+    //     }
+    // ];
+    // let (cols, rows) = size()?;
+    // let mut screen: Screen = Screen::new(cols, rows, components);
+    //
+    // execute!(stdout(), EnterAlternateScreen)?;
+    // terminal::enable_raw_mode()?;
+    //
+    // screen.update()?;
+    //
+    // loop {
+    //     if let Some(char) = read_char() {
+    //         if char.eq(&'q') {
+    //             break;
+    //         }
+    //     }
+    // }
+    // 
+    // queue!(stdout(), LeaveAlternateScreen)?;
+    // stdout().flush()?;
+    // terminal::disable_raw_mode()?;
+    
+    let mut w = stdout();
+    execute!(w, EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
 
-    screen.update()?;
+    let windows: Vec<Window> = Vec::new();
+
+    let (columns, rows) = size()?;
+    let screen: Screen = Screen {
+        columns,
+        rows,
+        windows,
+        buffer: Vec::new(),
+    };
 
     loop {
         if let Some(char) = read_char() {
@@ -93,11 +114,18 @@ fn main() -> Result<()> {
                 break;
             }
         }
+
+        if let Some(char) = read_char() {
+            if char.eq(&' ') {
+                // screen.update();
+            }
+        }
+        screen.render()
     }
-    
-    queue!(stdout(), LeaveAlternateScreen)?;
-    stdout().flush()?;
+
+    execute!(w, LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
+
     Ok(())
 }
 

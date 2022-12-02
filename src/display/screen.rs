@@ -1,55 +1,38 @@
-use std::io::{stdout, Stdout, Write};
+//Main visual outlet for the application. Made up of at least one Window, or multiple arranged in
+//tabs or splits.
 
-use super::super::sources::Source;
-use crossterm::{style::Print, queue, terminal::{Clear, ClearType}, Result, cursor::MoveTo};
+use crate::display::window::Window;
 
-pub struct ComponentSection {
-    pub width: f32,
-    pub height: f32,
-    pub formatter: &'static str,
-    pub sources: Vec<Box<dyn Source>>,
-    pub data: Vec<String>,
+enum WindowMode {
+    Single,
+    Tabs,
+    Splits
 }
 
-pub struct Screen {
-    cols: u16,
-    rows: u16,
-
-    w: Stdout,
-    sections: Vec<ComponentSection>,
+pub struct Screen<'a> {
+    pub columns: u16,
+    pub rows: u16,
+    pub windows: Vec<Window<'a>>,
+    pub buffer: Vec<Vec<&'a str>>
 }
 
-impl Screen {
-    pub fn update(&mut self) -> Result<()> {
-        queue!(self.w, Clear(ClearType::All))?;
+impl<'a> Screen<'a> {
+    ///formats (with borders) and draws the buffer to screen
+    pub fn render(&self) {
 
-        let mut x: u16 = 0;
-        for section in &self.sections {
-            queue!(self.w, MoveTo(x, 0))?;
-            // for line in &section.data {
-            //     queue!(self.w, Print(line))?;
-            // }
-            queue!(self.w, Print(section.formatter))?;
-            x += (section.width * self.cols as f32).round() as u16;
-        }
+        let window1: Vec<&str> = self.windows.get(0).unwrap().update_and_fetch(0, self.columns/3, 0, self.rows);
+        println!("{}", format!("{}", window1.get(0).unwrap()));
 
-        self.w.flush()?;
-        Ok(())
     }
 
-    pub fn set_size(&mut self, cols: u16, rows: u16) {
-        self.cols = cols;
-        self.rows = rows;
-    }
-}
-
-impl Screen {
-    pub fn new(cols: u16, rows: u16, components: Vec<ComponentSection>) -> Self {
-        Self {
-            cols,
-            rows,
-            w: stdout(),
-            sections: components,
-        }
-    }
+    // ///windows' sources update and each section stores relevant info, then info is sent back through to the screen buffer
+    // pub fn update(&mut self) {
+    //
+    //     for window in &mut self.windows {
+    //         self.buffer.push(
+    //                 window.update_and_fetch(0, self.columns, 0, self.rows)
+    //             );
+    //     }
+    //
+    // }
 }
